@@ -36,7 +36,17 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+extern int PWM_MAX;
+extern int PWM_MIN;	//PWM限幅变量
+extern int   Encoder_Left,Encoder_Right;        //左右编码器的脉冲计数
+extern int 	 Moto1,Moto2;										    //计算出来的最终赋给电机的PWM
 
+extern float BatteryVoltage;  													//电池电压采样相关的变量
+extern float pitch,roll,yaw; 										//欧拉角
+extern short aacx,aacy,aacz;										//加速度传感器原始数据
+extern short gyrox,gyroy,gyroz;									//陀螺仪原始数据
+
+extern int PWM_MAX,PWM_MIN;	//PWM限幅变量
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -59,6 +69,18 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_Pin GPIO_PIN_14
 #define LED_GPIO_Port GPIOC
+#define AIN2_Pin GPIO_PIN_12
+#define AIN2_GPIO_Port GPIOB
+#define AIN1_Pin GPIO_PIN_13
+#define AIN1_GPIO_Port GPIOB
+#define BIN1_Pin GPIO_PIN_14
+#define BIN1_GPIO_Port GPIOB
+#define BIN2_Pin GPIO_PIN_15
+#define BIN2_GPIO_Port GPIOB
+#define PWMB_Pin GPIO_PIN_8
+#define PWMB_GPIO_Port GPIOA
+#define PWMA_Pin GPIO_PIN_11
+#define PWMA_GPIO_Port GPIOA
 #define OLED_SCL_Pin GPIO_PIN_8
 #define OLED_SCL_GPIO_Port GPIOB
 #define OLED_SDA_Pin GPIO_PIN_9

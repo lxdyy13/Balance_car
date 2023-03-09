@@ -36,6 +36,7 @@
 #include "inv_mpu.h"
 
 #include "motor.h"
+#include "control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,17 +58,25 @@ char oled_text[16];
 
 /* USER CODE BEGIN PV */
 double volt=0.0f;
-float pitch, roll, yaw; 
 
-uint8_t pData;
+float pitch,roll,yaw; 								  			 //欧拉角(姿态角)
+short aacx,aacy,aacz;													 //加速度传感器原始数据
+short gyrox,gyroy,gyroz;											 //陀螺仪原始数据 
 
-int Encoder_Left,Encoder_Right;
+uint8_t usart3_pData;
+uint8_t usart2_pData;
+unsigned char buletooth_data[20];
+
+int remote_data=0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+//定义 串口调试
+float tempFloat[3];                    //定义的临时变量
+uint8_t tempData[16];                    //定义的传输Buffer
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -77,6 +86,7 @@ int fputc(int ch, FILE *f)
   HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, 0xFFFF);
   return (ch);
 }
+
 void oled_show(){
 	sprintf(oled_text,"   Balance_car"   );
 	OLED_ShowString(0,0,(unsigned char *)oled_text,12);
@@ -90,6 +100,8 @@ void oled_show(){
 	
 	OLED_ShowString(0,4,(unsigned char *)"YAW:",12);
 	OLED_ShowString(0,5,(unsigned char *)"PTICH:",12);
+	
+	OLED_ShowString(0,6,(unsigned char *)"remote: ",12);	
 }
 
 void oled_proc(){
@@ -102,7 +114,21 @@ void oled_proc(){
 	
 	OLED_Float(5,56,pitch,1);	//显示pitch
 	
+	OLED_ShowNum(60,6,remote_data,3,12);					//显示左边电机的编码器值
+	
 
+}
+void vofa_send(){
+	tempFloat[0] = (float)yaw;    //转成浮点数
+	tempFloat[1] = (float)pitch;
+	tempFloat[2] = (float)roll;
+	memcpy(tempData, (uint8_t *)tempFloat, sizeof(tempFloat));//通过拷贝把数据重新整理
+	tempData[12] = 0x00;                    //写如结尾数据
+	tempData[13] = 0x00;
+	tempData[14] = 0x80;
+	tempData[15] = 0x7f;
+
+	HAL_UART_Transmit_IT(&huart3, (uint8_t *)tempData, 16);    //通过串口传输16个数据
 }
 /* USER CODE END 0 */
 
@@ -139,8 +165,13 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_TIM1_Init();
+  MX_TIM4_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-	HAL_UART_Receive_IT(&huart3, &pData, 1);
+	//初始化串口
+	HAL_UART_Receive_IT(&huart2, &usart2_pData, 1);
+	HAL_UART_Receive_IT(&huart3, &usart3_pData, 1);
 	//初始化oled
 	SSD1315_Init();	
 	HAL_Delay(100);
@@ -159,6 +190,10 @@ int main(void)
 	//初始化编码器
 	Encoder_Start();
 	//初始化电机
+	Motor_Start();
+	//初始化定时器
+	HAL_TIM_Base_Start_IT(&htim4);
+	//初始化控制器
 	
   /* USER CODE END 2 */
 
@@ -166,19 +201,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		volt=get_volt();
-		if (mpu_dmp_get_data(&pitch, &roll, &yaw) == 0) //DMP读取欧拉角
-    {
-      HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin); //led电平翻转
-      printf("%f,%f,%f\r\n", pitch, roll, yaw);   //串口打印欧拉角
-    }
+		//volt=get_volt();
+//			if (mpu_dmp_get_data(&pitch, &roll, &yaw) == 0) //DMP读取欧拉角
+//				printf("%f,%f,%f\r\n", pitch, roll, yaw);   //串口打印欧拉角
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		Encoder_Left=-Read_Speed(2);
-		Encoder_Right=Read_Speed(3);
-		
-		oled_proc();
+		volt=get_volt();
   }
   /* USER CODE END 3 */
 }
@@ -230,7 +259,27 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+//定时器中断回调函数
+int main_time=0;
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim->Instance==TIM4)
+	{
+		MPU_Get_Gyroscope(&gyrox,&gyroy,&gyroz);								 //===得到陀螺仪数据
+		mpu_dmp_get_data(&pitch, &roll, &yaw);
+		control_proc();
+		oled_proc();
+		
+		//vofa_send();
+	}
+}
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart->Instance==USART2)
+	{
+		remote_data=usart2_pData;
+		HAL_UART_Receive_IT(&huart2, &usart2_pData, 1);
+	}
+}
 /* USER CODE END 4 */
 
 /**

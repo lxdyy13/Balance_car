@@ -43,3 +43,4 @@ balance_car\main.o: ../Hardware/badc.h
 balance_car\main.o: ../mpu/mpu6050.h
 balance_car\main.o: ../mpu/eMPL/inv_mpu.h
 balance_car\main.o: ../Hardware/motor.h
+balance_car\main.o: ../Hardware/control.h

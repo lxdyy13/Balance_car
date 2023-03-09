@@ -29,6 +29,7 @@
 "balance_car\oled.o"
 "balance_car\badc.o"
 "balance_car\motor.o"
+"balance_car\control.o"
 "balance_car\mpu6050.o"
 "balance_car\inv_mpu.o"
 "balance_car\inv_mpu_dmp_motion_driver.o"
